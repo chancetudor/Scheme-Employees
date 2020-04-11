@@ -1,2 +1,2 @@
 (load "payroll.scm")
-(compute "employees.dat")
+(compute "employees.dat" "test")

@@ -1,8 +1,9 @@
-(define-structure (salariedEmp keyword-constructor copier)
+;; structures for each type of employee to hold necessary information
+(define-structure (salariedEmp keyword-constructor)
 	type fName lName salary)
-(define-structure (hourlyEmp keyword-constructor copier)
+(define-structure (hourlyEmp keyword-constructor)
 	type fName lName hours rate)
-(define-structure (commEmp keyword-constructor copier)
+(define-structure (commEmp keyword-constructor)
 	type fName lName minSal sales commRate)
 
 (define (usage)
@@ -14,9 +15,8 @@
 		"Valid actions: count print min max total avg")
 	(define _validOps
 		"Valid operations: eq ne gt ge lt le\n")
-	(define _return
+	(display
 		(string-append _usage1 "\nor\n" _usage2 "\n\n" _validActions "\n" _validOps))
-	(display _return)
 	(exit)
 )
 
@@ -35,15 +35,24 @@
 	)
 )
 
-(define (count readList)
-	(define _partOne "There are ")
-	(define _partTwo " employees\n")
-	(define _empCount (number->string (length readList)))
-	(display (string-append _partOne _empCount _partTwo))
+;; splits a string by given delimiter
+;; returns list of strings making up OG string
+(define (str-split str ch)
+  (let ((len (string-length str)))
+    (letrec
+      ((split
+        (lambda (a b)
+          (cond
+            ((>= b len) (if (= a b) '() (cons (substring str a b) '())))
+              ((char=? ch (string-ref str b)) (if (= a b)
+                (split (+ 1 a) (+ 1 b))
+                  (cons (substring str a b) (split b b))))
+                (else (split a (+ 1 b)))))))
+                  (split 0 0)))
 )
 
 (define (makeHourly hourlyString)
-	(define _parsedHourly ((string-splitter) hourlyString))
+	(define _parsedHourly (str-split hourlyString #\space))
 	(make-hourlyEmp
 		'type (first _parsedHourly)
 		'fName (second _parsedHourly)
@@ -53,7 +62,7 @@
 )
 
 (define (makeCommission commString)
-	(define _parsedComm ((string-splitter) commString))
+	(define _parsedComm (str-split commString #\space))
 	(make-commEmp
 		'type (first _parsedComm)
 		'fName (second _parsedComm)
@@ -64,7 +73,7 @@
 )
 
 (define (makeSalaried salString)
-	(define _parsedSal ((string-splitter) salString)) ;; split string into parts
+	(define _parsedSal (str-split salString #\space))
 	(make-salariedEmp
 		'type (first _parsedSal)
 		'fName (second _parsedSal)
@@ -116,6 +125,23 @@
 	(if (< _earnings (commEmp-minSal emp)) (commEmp-minSal emp) _earnings)
 )
 
+(define (getSalEarning emp)
+	(salariedEmp-salary emp)
+)
+
+(define (getEarning emp)
+	(cond
+		((eqv? (getType emp) 'hourly)
+			(getHourlyEarning emp))
+		((eqv? (getType emp) 'comm)
+			(getCommEarning emp))
+		((eqv? (getType emp) 'sal)
+			(getSalEarning emp))
+	)
+)
+
+;; helper functions for print() function
+
 (define (printHourly emp)
 	(display (string-append
 		"Hourly employee: " (hourlyEmp-fName emp) " " (hourlyEmp-lName emp)))
@@ -124,7 +150,7 @@
 		"hours worked: " (number->string (hourlyEmp-hours emp))
 		", hourly rate: " (number->string (hourlyEmp-rate emp))))
 	(newline)
-	(display (string-append "earned $" (number->string (getHourlyEarning emp)) "\n"))
+	(display (string-append "earned $" (number->string (getEarning emp)) "\n"))
 	(newline)
 )
 
@@ -133,10 +159,10 @@
 		"Salaried employee: " (salariedEmp-fName emp) " " (salariedEmp-lName emp)))
 	(newline)
 	(display (string-append
-		"weekly salary: " (number->string (salariedEmp-salary emp))))
+		"weekly salary: " (number->string (getEarning emp))))
 	(newline)
 	(display (string-append
-		"earned $" (number->string (salariedEmp-salary emp)) "\n"))
+		"earned $" (number->string (getEarning emp)) "\n"))
 	(newline)
 )
 
@@ -149,8 +175,19 @@
 		", sales amount: " (number->string (commEmp-sales emp))
 		", commission rate: " (number->string (* (commEmp-commRate emp) 100)) "%"))
 	(newline)
-	(display (string-append "earned $" (number->string (getCommEarning emp)) "\n"))
+	(display (string-append "earned $" (number->string (getEarning emp)) "\n"))
 	(newline)
+)
+
+;; the actual meat of the program
+;; the actions the user requests
+;; list passed has already been cut to include thresh emps only (if required)
+
+(define (count readList)
+	(define _partOne "There are ")
+	(define _partTwo " employees\n")
+	(define _empCount (number->string (length readList)))
+	(display (string-append _partOne _empCount _partTwo))
 )
 
 (define (print lst)
@@ -167,35 +204,71 @@
 		(else (loop (cdr workList)))))
 )
 
-#|(define (min lst)
+(define (min lst)
 	(let loop
 		((workList lst)
-		(minEarning -1)
-		(currMin -1))
+		(minEarning (getEarning (first lst)))
+		(minEmp (first lst)))
 	(cond
-		((null? workList) minEarning)
-		((eqv? (hourlyEmp? (first workList)) #t)
-			(if (< (getHourlyEarning emp) currMin))
-	)
-	)
-))|#
+		((null? workList)
+			(cond
+				((eqv? (getType minEmp) 'hourly) (printHourly minEmp))
+				((eqv? (getType minEmp) 'sal) (printSalaried minEmp))
+				((eqv? (getType minEmp) 'comm) (printCommission minEmp))))
+		((< (getEarning (first workList)) minEarning)
+			(loop (cdr workList) (getEarning (first workList)) (first workList)))
+		(else
+			(loop (cdr workList) minEarning minEmp))))
+)
 
-;(define (max lst))
+(define (max lst)
+	(let loop
+		((workList lst)
+		(maxEarning (getEarning (first lst)))
+		(maxEmp (first lst)))
+	(cond
+		((null? workList)
+			(cond
+				((eqv? (getType maxEmp) 'hourly) (printHourly maxEmp))
+				((eqv? (getType maxEmp) 'sal) (printSalaried maxEmp))
+				((eqv? (getType maxEmp) 'comm) (printCommission maxEmp))))
+		((> (getEarning (first workList)) maxEarning)
+			(loop (cdr workList) (getEarning (first workList)) (first workList)))
+		(else
+			(loop (cdr workList) maxEarning maxEmp))))
+)
 
-;(define (total lst))
+(define (total lst)
+	(let loop
+		((workList lst)
+		(total 0.0))
+	(cond
+		((null? workList) (display (string-append
+			"Total payment is $" (number->string total) "\n")))
+		(else (loop (cdr workList) (+ total (getEarning (first workList)))))))
+)
 
-;(define (avg lst))
+(define (avg lst)
+	(define _size (length lst))
+	(let loop
+		((workList lst)
+		(total 0.0))
+	(cond
+		((null? workList) (display (string-append
+			"Average payment per employee is $" (number->string (/ total _size)) "\n")))
+		(else (loop (cdr workList) (+ total (getEarning (first workList)))))))
+)
 
+;; main function
 (define (compute . args)
-	;; TODO get arg handling to work correctly
-	#|(if (or (not (eqv? (length args) 2)) (not (eqv? (length args) 4))) (usage))|#
-	;; contains list of strings, each string representing different employee
+	(if (and (not (= (length args) 2)) (not (= (length args) 4))) (usage))
+	;; _readList = list of strings, each string representing different employee
 	(define _readList (call-with-input-file (first args) readFile))
-	;; (display (hourlyEmp-fName (first _hourlyList)))
-	;; contains list of employee structures
+	;; _empList =  list of employee structures
 	(define _empList (parseEmps _readList))
-	(print _empList)
-	(display (getType (first _empList)))
+	;; TODO implement thresh and op handling -- left off here
 
-	'done
+
+
+	0
 )
