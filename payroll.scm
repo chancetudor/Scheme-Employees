@@ -17,7 +17,7 @@
 	(define _return
 		(string-append _usage1 "\nor\n" _usage2 "\n\n" _validActions "\n" _validOps))
 	(display _return)
-	'error
+	(exit)
 )
 
 (define (readFile inFile)
@@ -36,16 +36,10 @@
 )
 
 (define (count readList)
-	(define _partOne
-		"There are ")
-	(define _partTwo
-		" employees\n")
-	(define _empCount
-		(number->string (length readList)))
-	(define _return
-		(string-append _partOne _empCount _partTwo))
-
-	(display _return)
+	(define _partOne "There are ")
+	(define _partTwo " employees\n")
+	(define _empCount (number->string (length readList)))
+	(display (string-append _partOne _empCount _partTwo))
 )
 
 (define (makeHourly hourlyString)
@@ -86,15 +80,77 @@
 		((null? workList) (reverse empList)) ; base case
 		((eqv? (substring? "salaried" (first workList)) #t) ; if employee is salaried
 			(loop (cdr workList) (cons (makeSalaried (first workList)) empList))) ; make salaried employee, add to list
-		((eqv? (substring? "hourly" (first readList)) #t) ; if employee is hourly
-			(loop (cdr workList) (cons (makeHourly (first work)) empList))) ; make hourly employee, add to list
+		((eqv? (substring? "hourly" (first workList)) #t) ; if employee is hourly
+			(loop (cdr workList) (cons (makeHourly (first workList)) empList))) ; make hourly employee, add to list
 		((eqv? (substring? "commission" (first workList)) #t) ; if employee is commission
 			(loop (cdr workList) (cons (makeCommission (first workList)) empList))) ; make commission employee, add to list
 		(else (loop (cdr workList) empList)))) ; else loop
 )
 
+(define (getType emp)
+	(cond
+		((eqv? (hourlyEmp? emp) #t) 'hourly)
+		((eqv? (salariedEmp? emp) #t) 'sal)
+		(else 'comm))
+)
+
+(define (getHourlyEarning emp)
+	(cond
+		((<= (hourlyEmp-hours emp) 40)
+			(* (hourlyEmp-hours emp) (hourlyEmp-rate emp)))
+		((and (> (hourlyEmp-hours emp) 40) (<= (hourlyEmp-hours emp) 50))
+			;; ((hours - 40) * (rate * 1.5)) + (40 * rate)
+			(+ (* (hourlyEmp-rate emp) 40)
+				(* (- (hourlyEmp-hours emp) 40) (* (hourlyEmp-rate emp) 1.5))))
+		((> (hourlyEmp-hours emp) 50)
+			;; ((hours - 50) * rate * 2) + (10 * (rate * 1.5)) + (rate * 40)
+			(+ (+ (* (- (hourlyEmp-hours emp) 50) (* (hourlyEmp-rate emp) 2))
+				(* (* (hourlyEmp-rate emp) 1.5) 10))
+				(* (hourlyEmp-rate emp) 40))))
+)
+
+(define (getCommEarning emp)
+	(define _earnings
+		(* (commEmp-sales emp) (commEmp-commRate emp)))
+	;; if earnings < minSal, return minSal. else return earnings
+	(if (< _earnings (commEmp-minSal emp)) (commEmp-minSal emp) _earnings)
+)
+
 (define (printHourly emp)
-	(display (hourlyEmp-type emp)) ;; TODO left off here
+	(display (string-append
+		"Hourly employee: " (hourlyEmp-fName emp) " " (hourlyEmp-lName emp)))
+	(newline)
+	(display (string-append
+		"hours worked: " (number->string (hourlyEmp-hours emp))
+		", hourly rate: " (number->string (hourlyEmp-rate emp))))
+	(newline)
+	(display (string-append "earned $" (number->string (getHourlyEarning emp)) "\n"))
+	(newline)
+)
+
+(define (printSalaried emp)
+	(display (string-append
+		"Salaried employee: " (salariedEmp-fName emp) " " (salariedEmp-lName emp)))
+	(newline)
+	(display (string-append
+		"weekly salary: " (number->string (salariedEmp-salary emp))))
+	(newline)
+	(display (string-append
+		"earned $" (number->string (salariedEmp-salary emp)) "\n"))
+	(newline)
+)
+
+(define (printCommission emp)
+	(display (string-append
+		"Commission employee: " (commEmp-fName emp) " " (commEmp-lName emp)))
+	(newline)
+	(display (string-append
+		"minimum salary: " (number->string (commEmp-minSal emp))
+		", sales amount: " (number->string (commEmp-sales emp))
+		", commission rate: " (number->string (* (commEmp-commRate emp) 100)) "%"))
+	(newline)
+	(display (string-append "earned $" (number->string (getCommEarning emp)) "\n"))
+	(newline)
 )
 
 (define (print lst)
@@ -102,16 +158,27 @@
 		((workList lst))
 	(cond
 		((null? workList) 'done)
-		((eqv? (hourlyEmp? (first workList)) #t)
+		((eqv? (getType (first workList)) 'hourly)
 			(printHourly (first workList)) (loop (cdr workList)))
-		(else (loop (cdr workList)))
-	)
-
-
-	)
+		((eqv? (getType (first workList)) 'sal)
+			(printSalaried (first workList)) (loop (cdr workList)))
+		((eqv? (getType (first workList)) 'comm)
+			(printCommission(first workList)) (loop (cdr workList)))
+		(else (loop (cdr workList)))))
 )
 
-;(define (min lst))
+#|(define (min lst)
+	(let loop
+		((workList lst)
+		(minEarning -1)
+		(currMin -1))
+	(cond
+		((null? workList) minEarning)
+		((eqv? (hourlyEmp? (first workList)) #t)
+			(if (< (getHourlyEarning emp) currMin))
+	)
+	)
+))|#
 
 ;(define (max lst))
 
@@ -127,12 +194,8 @@
 	;; (display (hourlyEmp-fName (first _hourlyList)))
 	;; contains list of employee structures
 	(define _empList (parseEmps _readList))
-	(display _empList)
-	(newline)
-	(display (hourlyEmp? (second _empList)))
-	(newline)
-	(printHourly (second _empList))
-	;(print _empList)
+	(print _empList)
+	(display (getType (first _empList)))
 
 	'done
 )
