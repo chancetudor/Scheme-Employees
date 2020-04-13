@@ -4,7 +4,7 @@
 (define-structure (hourlyEmp keyword-constructor)
 	type fName lName hours rate)
 (define-structure (commEmp keyword-constructor)
-	type fName lName minSal sales commRate)
+	type fName lName minListSal sales commRate)
 
 (define (usage)
 	(define _usage1
@@ -14,10 +14,10 @@
 	(define _validActions
 		"Valid actions: count print min max total avg")
 	(define _validOps
-		"Valid operations: eq ne gt ge lt le\n")
+		"Valid operations: eq ne gt ge lt le\n\n")
 	(display
 		(string-append _usage1 "\nor\n" _usage2 "\n\n" _validActions "\n" _validOps))
-	(exit)
+	(quit)
 )
 
 (define (readFile inFile)
@@ -37,6 +37,7 @@
 
 ;; splits a string by given delimiter
 ;; returns list of strings making up OG string
+
 (define (str-split str ch)
   (let ((len (string-length str)))
     (letrec
@@ -67,7 +68,7 @@
 		'type (first _parsedComm)
 		'fName (second _parsedComm)
 		'lName (third _parsedComm)
-		'minSal (string->number (fourth _parsedComm))
+		'minListSal (string->number (fourth _parsedComm))
 		'sales (string->number (fifth _parsedComm))
 		'commRate (string->number (sixth _parsedComm)))
 )
@@ -121,8 +122,8 @@
 (define (getCommEarning emp)
 	(define _earnings
 		(* (commEmp-sales emp) (commEmp-commRate emp)))
-	;; if earnings < minSal, return minSal. else return earnings
-	(if (< _earnings (commEmp-minSal emp)) (commEmp-minSal emp) _earnings)
+	;; if earnings < minListSal, return minListSal. else return earnings
+	(if (< _earnings (commEmp-minListSal emp)) (commEmp-minListSal emp) _earnings)
 )
 
 (define (getSalEarning emp)
@@ -171,7 +172,7 @@
 		"Commission employee: " (commEmp-fName emp) " " (commEmp-lName emp)))
 	(newline)
 	(display (string-append
-		"minimum salary: " (number->string (commEmp-minSal emp))
+		"min salary: " (number->string (commEmp-minListSal emp))
 		", sales amount: " (number->string (commEmp-sales emp))
 		", commission rate: " (number->string (* (commEmp-commRate emp) 100)) "%"))
 	(newline)
@@ -185,7 +186,7 @@
 
 (define (count readList)
 	(define _partOne "There are ")
-	(define _partTwo " employees\n")
+	(define _partTwo " employees\n\n")
 	(define _empCount (number->string (length readList)))
 	(display (string-append _partOne _empCount _partTwo))
 )
@@ -204,38 +205,38 @@
 		(else (loop (cdr workList)))))
 )
 
-(define (min lst)
+(define (minList lst)
 	(let loop
 		((workList lst)
-		(minEarning (getEarning (first lst)))
-		(minEmp (first lst)))
+		(minListEarning (getEarning (first lst)))
+		(minListEmp (first lst)))
 	(cond
 		((null? workList)
 			(cond
-				((eqv? (getType minEmp) 'hourly) (printHourly minEmp))
-				((eqv? (getType minEmp) 'sal) (printSalaried minEmp))
-				((eqv? (getType minEmp) 'comm) (printCommission minEmp))))
-		((< (getEarning (first workList)) minEarning)
+				((eqv? (getType minListEmp) 'hourly) (printHourly minListEmp))
+				((eqv? (getType minListEmp) 'sal) (printSalaried minListEmp))
+				((eqv? (getType minListEmp) 'comm) (printCommission minListEmp))))
+		((< (getEarning (first workList)) minListEarning)
 			(loop (cdr workList) (getEarning (first workList)) (first workList)))
 		(else
-			(loop (cdr workList) minEarning minEmp))))
+			(loop (cdr workList) minListEarning minListEmp))))
 )
 
-(define (max lst)
+(define (maxList lst)
 	(let loop
 		((workList lst)
-		(maxEarning (getEarning (first lst)))
-		(maxEmp (first lst)))
+		(maxListEarning (getEarning (first lst)))
+		(maxListEmp (first lst)))
 	(cond
 		((null? workList)
 			(cond
-				((eqv? (getType maxEmp) 'hourly) (printHourly maxEmp))
-				((eqv? (getType maxEmp) 'sal) (printSalaried maxEmp))
-				((eqv? (getType maxEmp) 'comm) (printCommission maxEmp))))
-		((> (getEarning (first workList)) maxEarning)
+				((eqv? (getType maxListEmp) 'hourly) (printHourly maxListEmp))
+				((eqv? (getType maxListEmp) 'sal) (printSalaried maxListEmp))
+				((eqv? (getType maxListEmp) 'comm) (printCommission maxListEmp))))
+		((> (getEarning (first workList)) maxListEarning)
 			(loop (cdr workList) (getEarning (first workList)) (first workList)))
 		(else
-			(loop (cdr workList) maxEarning maxEmp))))
+			(loop (cdr workList) maxListEarning maxListEmp))))
 )
 
 (define (total lst)
@@ -244,7 +245,7 @@
 		(total 0.0))
 	(cond
 		((null? workList) (display (string-append
-			"Total payment is $" (number->string total) "\n")))
+			"Total payment is $" (number->string total) "\n" "\n")))
 		(else (loop (cdr workList) (+ total (getEarning (first workList)))))))
 )
 
@@ -255,8 +256,44 @@
 		(total 0.0))
 	(cond
 		((null? workList) (display (string-append
-			"Average payment per employee is $" (number->string (/ total _size)) "\n")))
+			"Average payment per employee is $" (number->string (/ total _size)) "\n" "\n")))
 		(else (loop (cdr workList) (+ total (getEarning (first workList)))))))
+)
+
+(define _threshVal) ;; global var to use in functions below
+
+(define (_eq? emp) (= (getEarning emp) _threshVal))
+
+(define (ne? emp) (not (= (getEarning emp) _threshVal)))
+
+(define (gt? emp) (> (getEarning emp) _threshVal))
+
+(define (ge? emp) (>= (getEarning emp) _threshVal))
+
+(define (lt? emp) (< (getEarning emp) _threshVal))
+
+(define (le? emp) (<= (getEarning emp) _threshVal))
+
+(define (threshFilter lst op val)
+	(set! _threshVal val)
+	(cond
+		((equal? op "eq") (filter _eq? lst))
+		((equal? op "ne") (filter ne? lst))
+		((equal? op "gt") (filter gt? lst))
+		((equal? op "ge") (filter ge? lst))
+		((equal? op "lt") (filter lt? lst))
+		((equal? op "le") (filter le? lst))
+	)
+)
+
+(define (doWork lst action)
+	(cond
+		((equal? action "count") (count lst))
+		((equal? action "print") (print lst))
+		((equal? action "min") (minList lst))
+		((equal? action "max") (maxList lst))
+		((equal? action "total") (total lst))
+		((equal? action "avg") (avg lst)))
 )
 
 ;; main function
@@ -266,9 +303,7 @@
 	(define _readList (call-with-input-file (first args) readFile))
 	;; _empList =  list of employee structures
 	(define _empList (parseEmps _readList))
-	;; TODO implement thresh and op handling -- left off here
-
-
-
-	0
+	(if (= (length args) 2) (doWork _empList (second args)))
+	(if (= (length args) 4)
+		(doWork (threshFilter _empList (third args) (fourth args)) (second args)))
 )
