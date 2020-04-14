@@ -6,6 +6,8 @@ Usage notes are contained in payroll.scm but explained here for clarity:
 
 Usage: in test.scm, add functions such as (compute "employee_data_file" "action" ["operator" "threshold"])
 
+Note: operator and threshold are optional values.
+
 Valid actions: count print min max total avg 
 
 Valid operators: eq ne gt ge lt le
